@@ -1,4 +1,3 @@
-# cli/train.py
 from __future__ import annotations
 
 import argparse
@@ -8,7 +7,6 @@ import tensorflow as tf
 from src.config import PipelineConfig
 from src.data_loader import build_datasets
 from src.evaluation import evaluate_model
-from src.gpu import configure_gpu
 from src.helpers import print_kv, print_section
 from src.paths import ExperimentPaths
 from src.reporting import create_reports
@@ -22,11 +20,11 @@ def parse_args() -> argparse.Namespace:
     )
 
     parser.add_argument("--data_dir", type=str, default="data/chest_xray")
-    parser.add_argument("--img_size", type=int, default=299)
-    parser.add_argument("--batch_size", type=int, default=32)
+    parser.add_argument("--img_size", type=int, default=224)
+    parser.add_argument("--batch_size", type=int, default=16)
 
-    parser.add_argument("--epochs", type=int, default=10)
-    parser.add_argument("--fine_tune_epochs", type=int, default=10)
+    parser.add_argument("--epochs", type=int, default=5)
+    parser.add_argument("--fine_tune_epochs", type=int, default=3)
 
     parser.add_argument("--learning_rate", type=float, default=1e-4)
     parser.add_argument("--fine_tune_lr", type=float, default=1e-5)
@@ -36,7 +34,6 @@ def parse_args() -> argparse.Namespace:
 
     parser.add_argument("--run_name", type=str, default="xray_exp")
     parser.add_argument("--model_name", type=str, default="inceptionv3")
-    parser.add_argument("--gpu_index", type=int, default=-1)
 
     parser.add_argument("--train_take", type=int, default=-1)
     parser.add_argument("--val_take", type=int, default=-1)
@@ -49,7 +46,11 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument("--mixed_precision", action="store_true")
     parser.add_argument("--fine_tune", action="store_true")
     parser.add_argument("--use_class_weights", action="store_true")
-    parser.add_argument("--use_augmentation", action=argparse.BooleanOptionalAction, default=True)
+    parser.add_argument(
+        "--use_augmentation",
+        action=argparse.BooleanOptionalAction,
+        default=True,
+    )
 
     return parser.parse_args()
 
@@ -68,7 +69,6 @@ def build_config(args: argparse.Namespace) -> PipelineConfig:
         unfreeze_last_n=args.unfreeze_last_n,
         run_name=args.run_name,
         model_name=args.model_name,
-        gpu_index=args.gpu_index,
         train_take=args.train_take,
         val_take=args.val_take,
         test_take=args.test_take,
@@ -114,16 +114,13 @@ def main() -> None:
     print_kv("Class Weights", config.use_class_weights)
     print_kv("Mixed Precision", config.mixed_precision)
 
-    gpu_info = configure_gpu(config.gpu_index)
-    print_kv("Compute Device", gpu_info)
-
     print_section("Loading Data")
     data = build_datasets(config)
 
     print_kv("Classes", ", ".join(data.class_names))
     print_kv("Number of Classes", data.num_classes)
 
-    print_section("Data Split")
+    print_section("Dataset Split")
     print_kv("Train Samples", data.train_samples)
     print_kv("Validation Samples", data.val_samples)
     print_kv("Test Samples", data.test_samples)
