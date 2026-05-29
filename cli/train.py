@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import argparse
+from dataclasses import fields
 
 import tensorflow as tf
 
@@ -20,67 +21,53 @@ def parse_args() -> argparse.Namespace:
         description="Chest X-ray training pipeline"
     )
 
-    parser.add_argument("--data_dir", type=str, default="data/chest_xray")
-    parser.add_argument("--img_size", type=int, default=224)
-    parser.add_argument("--batch_size", type=int, default=16)
+    parser.add_argument("--data_dir", type=str, default=None)
+    parser.add_argument("--img_size", type=int, default=None)
+    parser.add_argument("--batch_size", type=int, default=None)
 
-    parser.add_argument("--epochs", type=int, default=5)
-    parser.add_argument("--fine_tune_epochs", type=int, default=3)
+    parser.add_argument("--epochs", type=int, default=None)
+    parser.add_argument("--fine_tune_epochs", type=int, default=None)
 
-    parser.add_argument("--learning_rate", type=float, default=1e-4)
-    parser.add_argument("--fine_tune_lr", type=float, default=1e-5)
+    parser.add_argument("--learning_rate", type=float, default=None)
+    parser.add_argument("--fine_tune_lr", type=float, default=None)
 
-    parser.add_argument("--dropout", type=float, default=0.3)
-    parser.add_argument("--unfreeze_last_n", type=int, default=50)
+    parser.add_argument("--dropout", type=float, default=None)
+    parser.add_argument("--unfreeze_last_n", type=int, default=None)
 
-    parser.add_argument("--run_name", type=str, default="xray_exp")
-    parser.add_argument("--model_name", type=str, default="inceptionv3")
+    parser.add_argument("--run_name", type=str, default=None)
+    parser.add_argument("--model_name", type=str, default=None)
 
-    parser.add_argument("--train_take", type=int, default=-1)
-    parser.add_argument("--val_take", type=int, default=-1)
-    parser.add_argument("--test_take", type=int, default=-1)
+    parser.add_argument("--train_take", type=int, default=None)
+    parser.add_argument("--val_take", type=int, default=None)
+    parser.add_argument("--test_take", type=int, default=None)
 
-    parser.add_argument("--seed", type=int, default=42)
-    parser.add_argument("--val_split", type=float, default=0.1)
+    parser.add_argument("--seed", type=int, default=None)
+    parser.add_argument("--val_split", type=float, default=None)
 
-    parser.add_argument("--cache", action="store_true")
-    parser.add_argument("--mixed_precision", action="store_true")
-    parser.add_argument("--fine_tune", action="store_true")
-    parser.add_argument("--use_class_weights", action="store_true")
+    parser.add_argument("--cache", action=argparse.BooleanOptionalAction, default=None)
+    parser.add_argument("--mixed_precision", action=argparse.BooleanOptionalAction, default=None)
+    parser.add_argument("--fine_tune", action=argparse.BooleanOptionalAction, default=None)
+    parser.add_argument("--use_class_weights", action=argparse.BooleanOptionalAction, default=None)
     parser.add_argument(
         "--use_augmentation",
         action=argparse.BooleanOptionalAction,
-        default=True,
+        default=None,
     )
 
     return parser.parse_args()
 
 
 def build_config(args: argparse.Namespace) -> PipelineConfig:
-    """Create a PipelineConfig instance from parsed CLI arguments."""
-    return PipelineConfig(
-        data_dir=args.data_dir,
-        img_size=args.img_size,
-        batch_size=args.batch_size,
-        epochs=args.epochs,
-        fine_tune_epochs=args.fine_tune_epochs,
-        learning_rate=args.learning_rate,
-        fine_tune_lr=args.fine_tune_lr,
-        dropout=args.dropout,
-        unfreeze_last_n=args.unfreeze_last_n,
-        run_name=args.run_name,
-        model_name=args.model_name,
-        train_take=args.train_take,
-        val_take=args.val_take,
-        test_take=args.test_take,
-        seed=args.seed,
-        val_split=args.val_split,
-        cache=args.cache,
-        mixed_precision=args.mixed_precision,
-        fine_tune=args.fine_tune,
-        use_class_weights=args.use_class_weights,
-        use_augmentation=args.use_augmentation,
-    )
+    """Create config defaults from PipelineConfig and override only CLI-provided values."""
+    config_fields = {field.name for field in fields(PipelineConfig)}
+
+    overrides = {
+        key: value
+        for key, value in vars(args).items()
+        if key in config_fields and value is not None
+    }
+
+    return PipelineConfig(**overrides)
 
 
 def main() -> None:
