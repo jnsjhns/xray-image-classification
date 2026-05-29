@@ -6,8 +6,17 @@ This project trains an image classification model for chest X-ray data using Ten
 
 ```text
 xray-image-classification/
+├── data/
+│   └── chest_xray/
+│       ├── train/
+│       │   ├── NORMAL/
+│       │   └── PNEUMONIA/
+│       └── test/
+│           ├── NORMAL/
+│           └── PNEUMONIA/
 ├── cli/
 │   └── train.py
+│
 ├── src/
 │   ├── callbacks.py
 │   ├── config.py
@@ -18,10 +27,15 @@ xray-image-classification/
 │   ├── paths.py
 │   ├── reporting.py
 │   └── training.py
-├── data/
-│   └── chest_xray/
-│       ├── train/
-│       └── test/
+│
+├── experiment_outputs/
+│   └── <timestamp_run_name>/
+│       ├── models/
+│       ├── runs/
+│       └── reports/
+│           ├── figures/
+│           └── metrics/
+│
 ├── requirements.txt
 └── README.md
 ```
