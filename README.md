@@ -42,7 +42,7 @@ xray-image-classification/
 
 ## Requirements
 
-- Python 3.10
+- Python 3.11
 - Git
 - Windows PowerShell, Command Prompt, or another terminal
 - Optional: PyCharm or VS Code
@@ -83,18 +83,10 @@ source .venv/bin/activate
 python -m pip install --upgrade pip
 ```
 
-## Install Dependencies
-
-If `requirements.txt` already exists:
+## Install all project dependencies
 
 ```bash
 python -m pip install -r requirements.txt
-```
-
-If TensorFlow still needs to be installed explicitly in a fresh environment:
-
-```bash
-python -m pip install tensorflow==2.15.0
 ```
 
 ## Prepare the Dataset
@@ -116,17 +108,20 @@ data/chest_xray/
 Use this minimal run to verify that the pipeline works end to end:
 
 ```bash
-python -m cli.train --train_take 1 --val_take 1 --test_take 1 --epochs 1 --fine_tune_epochs 0 --batch_size 8 --img_size 224 --use_augmentation
-```
+python -m cli.train \
+  --train_take 1 \
+  --val_take 1 \
+  --test_take 1 \
+  --epochs 1 \
+  --fine_tune_epochs 0
+  ```
 
 ## Run Training
 
-A typical training command looks like this:
+A typical training command can override only the values that should differ from `src/config.py`:
 
 ```bash
 python -m cli.train \
-  --data_dir data/chest_xray \
-  --run_name xray_exp \
   --img_size 224 \
   --batch_size 16 \
   --epochs 5 \
@@ -136,7 +131,19 @@ python -m cli.train \
   --use_augmentation
 ```
 
+The dataset path does not need to be passed if it matches the default in `src/config.py`:
+
+```python
+data_dir: Path = Path("data/chest_xray")
+```
+```
+
 ## Important CLI Arguments
+
+
+```
+All CLI arguments are optional overrides for the defaults in `src/config.py`.
+```
 
 | Argument | Description |
 |---|---|
@@ -169,6 +176,7 @@ __pycache__/
 experiment_outputs/
 *.keras
 *.h5
+.DS_Store
 ```
 
 ## Troubleshooting
