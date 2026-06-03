@@ -131,18 +131,26 @@ def build_model(
         name="input_image",
     )
 
+    # Optional data augmentation
     if config.use_augmentation:
         x = build_augmentation_layer(config)(inputs)
     else:
         x = inputs
 
+    # Preprocessing (e.g. InceptionV3 preprocess_input)
     preprocess_fn = get_preprocess_fn(config.model_name)
     x = preprocess_fn(x)
 
+    # Backbone (e.g. InceptionV3 without top)
     base_model = build_backbone(config)
     x = base_model(x, training=False)
 
-    x = layers.GlobalAveragePooling2D(name="global_avg_pooling")(x)
+    # Grad-CAM anchor: last convolutional feature maps
+    gradcam_features = layers.Identity(name="gradcam_features")(x)
+    # gradcam_features with Shape (H, W, C)
+
+    # Classification head
+    x = layers.GlobalAveragePooling2D(name="global_avg_pooling")(gradcam_features)
     x = layers.Dropout(config.dropout, seed=config.seed, name="head_dropout")(x)
 
     outputs = layers.Dense(
@@ -188,3 +196,4 @@ def unfreeze_layers(base_model: keras.Model, unfreeze_last_n: int) -> None:
             layer.trainable = False
         else:
             layer.trainable = True
+
