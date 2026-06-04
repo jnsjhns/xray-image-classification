@@ -117,7 +117,6 @@ def main() -> None:
     print_kv("Train Samples", data.train_samples)
     print_kv("Validation Samples", data.val_samples)
     print_kv("Test Samples", data.test_samples)
-    print_kv("Validation Order", "deterministic (shuffle=False)")
 
     if data.class_counts is not None:
         print_section("Class Weights")

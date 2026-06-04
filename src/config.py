@@ -5,6 +5,8 @@ from dataclasses import asdict, dataclass
 from pathlib import Path
 from typing import Any
 
+from datetime import datetime
+
 
 @dataclass
 class PipelineConfig:
@@ -32,7 +34,7 @@ class PipelineConfig:
     unfreeze_last_n: int = 50
 
     # ------------------ Run control ------------------
-    run_name: str = "chest_xray_exp"
+    run_name: str | None = None
 
     train_take: int = -1
     val_take: int = -1
@@ -52,8 +54,11 @@ class PipelineConfig:
     def __post_init__(self) -> None:
         self.data_dir = Path(self.data_dir)
 
-        if not self.run_name.strip():
+        if self.run_name is not None and not self.run_name.strip():
             raise ValueError("run_name must not be empty.")
+
+        if self.run_name is None:
+            self.run_name = self.build_run_name()
 
         if not self.model_name.strip():
             raise ValueError("model_name must not be empty.")
@@ -104,3 +109,44 @@ class PipelineConfig:
         payload["train_dir"] = str(self.train_dir)
         payload["test_dir"] = str(self.test_dir)
         return payload
+
+    def build_run_name(self) -> str:
+        """
+        Automatically generate a descriptive experiment name.
+        """
+        model_map = {
+            "inceptionv3": "incv3",
+            "resnet50": "res50",
+            "efficientnetb0": "effb0",
+            "efficientnetb3": "effb3",
+            "cnn_scratch": "cnn",
+        }
+
+        model_part = model_map.get(
+            self.model_name.lower(),
+            self.model_name.lower(),
+        )
+
+        if self.model_name.lower() == "cnn_scratch":
+            train_part = "scratch"
+        elif self.fine_tune:
+            train_part = f"ft{self.unfreeze_last_n}"
+        else:
+            train_part = "frozen"
+
+        cw_part = "cw" if self.use_class_weights else "nocw"
+        aug_part = "aug" if self.use_augmentation else "noaug"
+
+        return "_".join(
+            [
+                model_part,
+                train_part,
+                f"img{self.img_size}",
+                f"bs{self.batch_size}",
+                f"e{self.epochs}",
+                f"lr{self.learning_rate:.0e}",
+                f"do{int(self.dropout * 100)}",
+                cw_part,
+                aug_part,
+            ]
+        )
