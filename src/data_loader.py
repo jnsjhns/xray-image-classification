@@ -10,6 +10,8 @@ from tensorflow import keras
 
 from src.config import PipelineConfig
 
+from collections import Counter
+
 
 @dataclass
 class DatasetBundle:
@@ -71,6 +73,13 @@ def count_classes(ds: tf.data.Dataset, num_classes: int) -> np.ndarray:
         counts += np.bincount(y_batch.numpy(), minlength=num_classes)
     return counts
 
+def count_labels(ds: tf.data.Dataset) -> Counter:
+    counter = Counter()
+
+    for _, labels in ds:
+        counter.update(labels.numpy().astype(int).tolist())
+
+    return counter
 
 def compute_class_weights_from_counts(counts: np.ndarray) -> dict[int, float]:
     """Compute balanced class weights from class frequencies."""
@@ -106,7 +115,7 @@ def build_datasets(config: PipelineConfig) -> DatasetBundle:
         path=str(config.train_dir),
         img_size=config.img_size,
         batch_size=config.batch_size,
-        shuffle=False,
+        shuffle=True,
         seed=config.seed,
         validation_split=config.val_split,
         subset="validation",
@@ -132,6 +141,10 @@ def build_datasets(config: PipelineConfig) -> DatasetBundle:
         val_raw = val_raw.take(config.val_take)
     if config.test_take > 0:
         test_raw = test_raw.take(config.test_take)
+
+    print("DEBUG train label distribution:", count_labels(train_raw))
+    print("DEBUG val label distribution:", count_labels(val_raw))
+    print("DEBUG test label distribution:", count_labels(test_raw))
 
     # 3. Compute dataset statistics on the potentially reduced datasets
     train_samples = count_samples(train_raw)

@@ -52,18 +52,17 @@ def get_preprocess_fn(model_name: str) -> Callable:
     if model_name == "inceptionv3":
         return keras.applications.inception_v3.preprocess_input
 
-    # ------------------------------------------------------------
-    # Add more architectures here later:
-    #
-    # if model_name == "resnet50":
-    #     return keras.applications.resnet50.preprocess_input
-    #
-    # if model_name == "efficientnetb0":
-    #     return keras.applications.efficientnet.preprocess_input
-    #
-    # if model_name == "efficientnetb3":
-    #     return keras.applications.efficientnet.preprocess_input
-    # ------------------------------------------------------------
+    if model_name == "cnn_scratch":
+        return lambda x: x
+
+    if model_name == "resnet50":
+        return keras.applications.resnet50.preprocess_input
+
+    if model_name == "efficientnetb0":
+        return keras.applications.efficientnet.preprocess_input
+
+    if model_name == "efficientnetb3":
+        return keras.applications.efficientnet.preprocess_input
 
     raise ValueError(f"Unsupported model: {model_name}")
 
@@ -83,38 +82,108 @@ def build_backbone(config: PipelineConfig) -> keras.Model:
         base_model.trainable = False
         return base_model
 
-    # ------------------------------------------------------------
-    # Add more architectures here later:
-    #
-    # if model_name == "resnet50":
-    #     base_model = keras.applications.ResNet50(
-    #         weights="imagenet",
-    #         include_top=False,
-    #         input_shape=(config.img_size, config.img_size, 3),
-    #     )
-    #     base_model.trainable = False
-    #     return base_model
-    #
-    # if model_name == "efficientnetb0":
-    #     base_model = keras.applications.EfficientNetB0(
-    #         weights="imagenet",
-    #         include_top=False,
-    #         input_shape=(config.img_size, config.img_size, 3),
-    #     )
-    #     base_model.trainable = False
-    #     return base_model
-    #
-    # if model_name == "efficientnetb3":
-    #     base_model = keras.applications.EfficientNetB3(
-    #         weights="imagenet",
-    #         include_top=False,
-    #         input_shape=(config.img_size, config.img_size, 3),
-    #     )
-    #     base_model.trainable = False
-    #     return base_model
-    # ------------------------------------------------------------
+
+    if model_name == "resnet50":
+        base_model = keras.applications.ResNet50(
+            weights="imagenet",
+            include_top=False,
+            input_shape=(config.img_size, config.img_size, 3),
+        )
+        base_model.trainable = False
+        return base_model
+
+    if model_name == "efficientnetb0":
+        base_model = keras.applications.EfficientNetB0(
+            weights="imagenet",
+            include_top=False,
+            input_shape=(config.img_size, config.img_size, 3),
+        )
+        base_model.trainable = False
+        return base_model
+
+    if model_name == "efficientnetb3":
+        base_model = keras.applications.EfficientNetB3(
+            weights="imagenet",
+            include_top=False,
+            input_shape=(config.img_size, config.img_size, 3),
+        )
+        base_model.trainable = False
+        return base_model
 
     raise ValueError(f"Unsupported model: {model_name}")
+
+
+def build_cnn_from_scratch(
+    config: PipelineConfig,
+    num_classes: int,
+) -> keras.Model:
+
+    inputs = keras.Input(
+        shape=(config.img_size, config.img_size, 3),
+        name="input_image",
+    )
+
+    x = layers.Rescaling(1.0 / 255)(inputs)
+
+    if config.use_augmentation:
+        x = build_augmentation_layer(config)(x)
+
+    x = layers.Conv2D(
+        32,
+        3,
+        activation="relu",
+        padding="same",
+    )(x)
+    x = layers.MaxPooling2D()(x)
+
+    x = layers.Conv2D(
+        64,
+        3,
+        activation="relu",
+        padding="same",
+    )(x)
+    x = layers.MaxPooling2D()(x)
+
+    x = layers.Conv2D(
+        128,
+        3,
+        activation="relu",
+        padding="same",
+    )(x)
+    x = layers.MaxPooling2D()(x)
+
+    x = layers.Conv2D(
+        256,
+        3,
+        activation="relu",
+        padding="same",
+    )(x)
+
+    # Grad-CAM
+    gradcam_features = layers.Identity(
+        name="gradcam_features"
+    )(x)
+
+    x = layers.GlobalAveragePooling2D(name="global_avg_pooling")(gradcam_features)
+
+    x = layers.Dense(256, activation="relu", name="scratch_dense_1")(x)
+    x = layers.Dropout(config.dropout, seed=config.seed, name="head_dropout_1")(x)
+
+    x = layers.Dense(128, activation="relu", name="scratch_dense_2")(x)
+    x = layers.Dropout(config.dropout, seed=config.seed, name="head_dropout_2")(x)
+
+    outputs = layers.Dense(
+        num_classes,
+        activation="softmax",
+        dtype="float32",
+        name="predictions",
+    )(x)
+
+    return keras.Model(
+        inputs=inputs,
+        outputs=outputs,
+        name="xray_cnn_scratch",
+    )
 
 
 def build_model(
@@ -122,10 +191,18 @@ def build_model(
     num_classes: int,
 ) -> tuple[keras.Model, keras.Model]:
     """
-    Build the full model from augmentation, preprocessing, backbone, and head.
-
-    Returns both the full model and the backbone model.
+        Build the full model from augmentation, preprocessing, backbone, and head.
+        Returns both the full model and the backbone model.
     """
+
+    if config.model_name.lower() == "cnn_scratch":
+        model = build_cnn_from_scratch(
+            config=config,
+            num_classes=num_classes,
+        )
+        return model, model
+
+    # InceptionV3 / transfer learning
     inputs = keras.Input(
         shape=(config.img_size, config.img_size, 3),
         name="input_image",
