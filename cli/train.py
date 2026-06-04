@@ -175,7 +175,7 @@ def main() -> None:
         paths=paths,
     )
 
-    test_loss = results.summary["results"].get("loss", float("nan"))
+    test_loss = results.summary["test_results"].get("loss", float("nan"))
     if not isinstance(test_loss, (int, float)):
         test_loss = float("nan")
 
@@ -196,13 +196,13 @@ def main() -> None:
     )
     print()
     print_kv("TEST Loss", f"{test_loss:.4f}")
-    print_kv("TEST Macro ROC-AUC OvR", f"{results.summary['results']['roc_auc_ovr_macro']:.4f}")
-    print_kv("TEST Weighted ROC-AUC OvR", f"{results.summary['results']['roc_auc_ovr_weighted']:.4f}")
+    print_kv("TEST Macro ROC-AUC OvR", f"{results.summary['test_results']['roc_auc_ovr_macro']:.4f}")
+    print_kv("TEST Weighted ROC-AUC OvR", f"{results.summary['test_results']['roc_auc_ovr_weighted']:.4f}")
 
-    if "sparse_top_k_categorical_accuracy" in results.summary["results"]:
+    if "sparse_top_k_categorical_accuracy" in results.summary["test_results"]:
         print_kv(
             "TEST Top-K Accuracy",
-            f"{results.summary['results']['sparse_top_k_categorical_accuracy']:.4f}",
+            f"{results.summary['test_results']['sparse_top_k_categorical_accuracy']:.4f}",
         )
 
     print_section("Saved Artifacts")

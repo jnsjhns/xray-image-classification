@@ -27,8 +27,10 @@ class EvaluationResults:
     confusion_matrix: np.ndarray
     classification_report_dict: dict
     classification_report_df: pd.DataFrame
+    val_classification_report_dict: dict
     val_classification_report_df: pd.DataFrame
     val_auc: float
+    val_auc_weighted: float
     eval_dict: dict[str, float]
     summary: dict
 
@@ -90,6 +92,9 @@ def _build_summary(
     manual_accuracy: float,
     roc_auc_macro: float,
     roc_auc_weighted: float,
+    val_report: dict,
+    val_auc: float,
+    val_auc_weighted: float,
 ) -> dict:
     """Build the final summary dictionary."""
     return {
@@ -106,7 +111,7 @@ def _build_summary(
             "val_samples_used": data.val_samples,
             "test_samples_used": data.test_samples,
         },
-        "results": {
+        "test_results": {
             **eval_dict,
             "manual_test_accuracy": manual_accuracy,
             "roc_auc_ovr_macro": roc_auc_macro,
@@ -117,6 +122,16 @@ def _build_summary(
             "weighted_precision": float(report["weighted avg"]["precision"]),
             "weighted_recall": float(report["weighted avg"]["recall"]),
             "weighted_f1": float(report["weighted avg"]["f1-score"]),
+        },
+        "validation_results": {
+            "val_roc_auc_ovr_macro": float(val_auc),
+            "val_roc_auc_ovr_weighted": float(val_auc_weighted),
+            "val_macro_precision": float(val_report["macro avg"]["precision"]),
+            "val_macro_recall": float(val_report["macro avg"]["recall"]),
+            "val_macro_f1": float(val_report["macro avg"]["f1-score"]),
+            "val_weighted_precision": float(val_report["weighted avg"]["precision"]),
+            "val_weighted_recall": float(val_report["weighted avg"]["recall"]),
+            "val_weighted_f1": float(val_report["weighted avg"]["f1-score"]),
         },
         "paths": {
             "best_model": str(paths.best_model_path),
@@ -175,7 +190,7 @@ def evaluate_model(
 
     val_report_df = pd.DataFrame(val_report).transpose()
 
-    val_auc, _ = _safe_roc_auc(
+    val_auc, val_auc_weighted = _safe_roc_auc(
         y_true=val_y_true,
         y_prob=val_y_prob,
         num_classes=data.num_classes,
@@ -239,10 +254,13 @@ def evaluate_model(
         paths=paths,
         eval_dict=eval_dict,
         report=report,
+        val_report=val_report,
         class_names=data.class_names,
         manual_accuracy=manual_accuracy,
         roc_auc_macro=roc_auc_macro,
         roc_auc_weighted=roc_auc_weighted,
+        val_auc=val_auc,
+        val_auc_weighted=val_auc_weighted,
     )
 
     return EvaluationResults(
@@ -251,8 +269,10 @@ def evaluate_model(
         y_pred=y_pred,
         y_prob=y_prob,
         confusion_matrix=cm,
+        val_classification_report_dict=val_report,
         val_classification_report_df=val_report_df,
         val_auc=val_auc,
+        val_auc_weighted=val_auc_weighted,
         classification_report_dict=report,
         classification_report_df=report_df,
         eval_dict=eval_dict,

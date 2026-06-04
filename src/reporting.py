@@ -101,11 +101,19 @@ def export_evaluation_artifacts(
 ) -> None:
     """
     Export evaluation artifacts:
-    - classification report as CSV
+    - validation report as CSV
+    - test report as CSV
     - summary as JSON
     """
+    # Test classification report
     results.classification_report_df.to_csv(
-        paths.met_dir / f"{paths.run_id}_report.csv",
+        paths.met_dir / f"{paths.run_id}_test_report.csv",
+        index=True,
+    )
+
+    # Validation classification report
+    results.val_classification_report_df.to_csv(
+        paths.met_dir / f"{paths.run_id}_validation_report.csv",
         index=True,
     )
 
