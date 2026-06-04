@@ -3,9 +3,10 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+import numpy as np
 
 import matplotlib.pyplot as plt
-from sklearn.metrics import ConfusionMatrixDisplay
+from sklearn.metrics import ConfusionMatrixDisplay, roc_curve, auc
 
 from src.evaluation import EvaluationResults
 from src.paths import ExperimentPaths
@@ -94,6 +95,33 @@ def plot_confusion_matrix(
     plt.savefig(paths.fig_dir / f"{paths.run_id}_cm.png", dpi=200)
     plt.close(fig)
 
+def plot_roc_curve(
+    results: EvaluationResults,
+    paths: ExperimentPaths,
+) -> None:
+    """
+    Save the ROC curve (One-vs-Rest) for each class as a PNG file.
+    """
+    class_names = results.summary["class_names"]
+    num_classes = len(class_names)
+    y_true_onehot = np.eye(num_classes)[results.y_true.astype(int)]
+
+    fig, ax = plt.subplots(figsize=(8, 6))
+
+    for i, name in enumerate(class_names):
+        fpr, tpr, _ = roc_curve(y_true_onehot[:, i], results.y_prob[:, i])
+        roc_auc = auc(fpr, tpr)
+        ax.plot(fpr, tpr, label=f"{name} (AUC = {roc_auc:.2f})")
+
+    ax.plot([0, 1], [0, 1], "k--", linewidth=0.8)
+    ax.set_xlabel("False Positive Rate")
+    ax.set_ylabel("True Positive Rate")
+    ax.set_title("ROC Curve (One-vs-Rest)")
+    ax.legend(loc="lower right")
+    ax.grid(alpha=0.3)
+    plt.tight_layout()
+    plt.savefig(paths.fig_dir / f"{paths.run_id}_roc_curve.png", dpi=200)
+    plt.close(fig)
 
 def export_evaluation_artifacts(
     results: EvaluationResults,
@@ -133,4 +161,5 @@ def create_reports(
     """
     plot_training_curves(history_dict, paths)
     plot_confusion_matrix(results, paths)
+    plot_roc_curve(results, paths)
     export_evaluation_artifacts(results, paths)

@@ -15,7 +15,9 @@ xray-image-classification/
 │           ├── NORMAL/
 │           └── PNEUMONIA/
 ├── cli/
-│   └── train.py
+│   └── explainability.py
+|   └── predict.py
+|   └── train.py
 │
 ├── src/
 │   ├── callbacks.py
