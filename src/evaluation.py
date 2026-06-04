@@ -27,6 +27,8 @@ class EvaluationResults:
     confusion_matrix: np.ndarray
     classification_report_dict: dict
     classification_report_df: pd.DataFrame
+    val_classification_report_df: pd.DataFrame
+    val_auc: float
     eval_dict: dict[str, float]
     summary: dict
 
@@ -150,6 +152,35 @@ def evaluate_model(
         metrics=_build_eval_metrics(data.num_classes),
     )
 
+    val_y_true_batches = []
+    val_y_prob_batches = []
+
+    for x_batch, y_batch in data.val_ds:
+        preds = model.predict_on_batch(x_batch)
+        val_y_prob_batches.append(preds)
+        val_y_true_batches.append(y_batch.numpy())
+
+    val_y_prob = np.concatenate(val_y_prob_batches, axis=0)
+    val_y_true = np.concatenate(val_y_true_batches, axis=0)
+    val_y_pred = np.argmax(val_y_prob, axis=1)
+
+    val_report = classification_report(
+        val_y_true,
+        val_y_pred,
+        labels=np.arange(data.num_classes),
+        target_names=data.class_names,
+        output_dict=True,
+        zero_division=0,
+    )
+
+    val_report_df = pd.DataFrame(val_report).transpose()
+
+    val_auc, _ = _safe_roc_auc(
+        y_true=val_y_true,
+        y_prob=val_y_prob,
+        num_classes=data.num_classes,
+    )
+
     # Collect labels and predictions together
     y_true_batches = []
     y_prob_batches = []
@@ -220,6 +251,8 @@ def evaluate_model(
         y_pred=y_pred,
         y_prob=y_prob,
         confusion_matrix=cm,
+        val_classification_report_df=val_report_df,
+        val_auc=val_auc,
         classification_report_dict=report,
         classification_report_df=report_df,
         eval_dict=eval_dict,

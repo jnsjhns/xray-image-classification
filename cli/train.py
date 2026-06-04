@@ -59,6 +59,12 @@ def parse_args() -> argparse.Namespace:
         default=None,
     )
 
+    parser.add_argument(
+        "--dry_run_name",
+        action="store_true",
+        help="Only generate and print the run name, then exit.",
+    )
+
     return parser.parse_args()
 
 
@@ -75,6 +81,23 @@ def build_config(args: argparse.Namespace) -> PipelineConfig:
     return PipelineConfig(**overrides)
 
 
+def print_classification_table(title: str, report_df, class_names: list[str]) -> None:
+    cols = ["precision", "recall", "f1-score", "support"]
+
+    print()
+    print(f"=== {title} ===")
+    print()
+
+    rows = class_names + ["accuracy", "macro avg", "weighted avg"]
+
+    print(
+        report_df.loc[
+            rows,
+            cols,
+        ].round(4).to_string()
+    )
+
+
 def main() -> None:
     args = parse_args()
     config = build_config(args)
@@ -82,12 +105,20 @@ def main() -> None:
     if not (0.0 < config.val_split < 1.0):
         raise ValueError("--val_split must be between 0 and 1.")
 
+    paths = ExperimentPaths.from_config(config)
+
+    # Debugging run name build
+    if args.dry_run_name:
+        print(f"Run Name: {config.run_name}")
+        print(f"Run ID  : {paths.run_id}")
+        print(f"Output  : {paths.output_root}")
+        return
+
     tf.keras.utils.set_random_seed(config.seed)
 
     if config.mixed_precision:
         tf.keras.mixed_precision.set_global_policy("mixed_float16")
 
-    paths = ExperimentPaths.from_config(config)
     paths.create_directories()
 
     print_section("Run Initialization")
@@ -131,7 +162,7 @@ def main() -> None:
         paths=paths,
     )
 
-    print_section("Evaluation on Test Set")
+    print_section("Evaluation")
     results = evaluate_model(
         config=config,
         data=data,
@@ -149,38 +180,36 @@ def main() -> None:
         test_loss = float("nan")
 
     print_section("Results Overview")
-    print_kv("Best Model", paths.best_model_path.name)
-    print_kv("Test Loss", f"{test_loss:.4f}")
-    print_kv("Test Accuracy", f"{results.summary['results']['manual_test_accuracy']:.4f}")
+
+    print_classification_table(
+        title="VALIDATION",
+        report_df=results.val_classification_report_df,
+        class_names=data.class_names,
+    )
+    print()
+    print_kv("VAL Macro ROC-AUC OvR", f"{results.val_auc:.4f}")
+
+    print_classification_table(
+        title="TEST",
+        report_df=results.classification_report_df,
+        class_names=data.class_names,
+    )
+    print()
+    print_kv("TEST Loss", f"{test_loss:.4f}")
+    print_kv("TEST Macro ROC-AUC OvR", f"{results.summary['results']['roc_auc_ovr_macro']:.4f}")
+    print_kv("TEST Weighted ROC-AUC OvR", f"{results.summary['results']['roc_auc_ovr_weighted']:.4f}")
 
     if "sparse_top_k_categorical_accuracy" in results.summary["results"]:
         print_kv(
-            "Test Top-2 Accuracy",
+            "TEST Top-K Accuracy",
             f"{results.summary['results']['sparse_top_k_categorical_accuracy']:.4f}",
         )
 
-    print_kv("ROC-AUC OVR Macro", f"{results.summary['results']['roc_auc_ovr_macro']:.4f}")
-    print_kv("ROC-AUC OVR Weighted", f"{results.summary['results']['roc_auc_ovr_weighted']:.4f}")
-    print_kv("Macro Precision", f"{results.summary['results']['macro_precision']:.4f}")
-    print_kv("Macro Recall", f"{results.summary['results']['macro_recall']:.4f}")
-    print_kv("Macro F1", f"{results.summary['results']['macro_f1']:.4f}")
-    print_kv("Weighted Precision", f"{results.summary['results']['weighted_precision']:.4f}")
-    print_kv("Weighted Recall", f"{results.summary['results']['weighted_recall']:.4f}")
-    print_kv("Weighted F1", f"{results.summary['results']['weighted_f1']:.4f}")
-    print_kv("Model Path", paths.best_model_path)
+    print_section("Saved Artifacts")
+    print_kv("Best Model", paths.best_model_path)
     print_kv("Log Directory", paths.log_dir)
     print_kv("Metrics Directory", paths.met_dir)
     print_kv("Figures Directory", paths.fig_dir)
-
-    print()
-    print("Class-wise metrics:")
-    class_report_cols = ["precision", "recall", "f1-score", "support"]
-    print(
-        results.classification_report_df.loc[
-            data.class_names,
-            class_report_cols,
-        ].round(4).to_string()
-    )
 
     print()
     print(f"[INFO] Results saved to: {paths.output_root}")
