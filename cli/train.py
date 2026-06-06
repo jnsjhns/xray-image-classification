@@ -59,6 +59,14 @@ def parse_args() -> argparse.Namespace:
         default=None,
     )
 
+    parser.add_argument("--aug_rotation", action=argparse.BooleanOptionalAction, default=None)
+    parser.add_argument("--aug_zoom", action=argparse.BooleanOptionalAction, default=None)
+    parser.add_argument("--aug_contrast", action=argparse.BooleanOptionalAction, default=None)
+
+    parser.add_argument("--aug_rotation_factor", type=float, default=None)
+    parser.add_argument("--aug_zoom_factor", type=float, default=None)
+    parser.add_argument("--aug_contrast_factor", type=float, default=None)
+
     parser.add_argument(
         "--dry_run_name",
         action="store_true",

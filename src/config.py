@@ -46,6 +46,14 @@ class PipelineConfig:
     use_class_weights: bool = False
     use_augmentation: bool = True
 
+    aug_rotation: bool = False
+    aug_zoom: bool = False
+    aug_contrast: bool = False
+
+    aug_rotation_factor: float = 0.05
+    aug_zoom_factor: float = 0.10
+    aug_contrast_factor: float = 0.10
+
     # ------------------ Project metadata ------------------
     project_name: str = "chest_xray_project"
     output_root_name: str = "experiment_outputs"
@@ -135,7 +143,21 @@ class PipelineConfig:
             train_part = "frozen"
 
         cw_part = "cw" if self.use_class_weights else "nocw"
-        aug_part = "aug" if self.use_augmentation else "noaug"
+        if not self.use_augmentation:
+            aug_part = "noaug"
+        else:
+            active_aug = []
+
+            if self.aug_rotation:
+                active_aug.append("rot")
+
+            if self.aug_zoom:
+                active_aug.append("zoom")
+
+            if self.aug_contrast:
+                active_aug.append("con")
+
+            aug_part = "aug_" + "_".join(active_aug) if active_aug else "aug_none"
 
         return "_".join(
             [

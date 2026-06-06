@@ -133,6 +133,26 @@ def _build_summary(
             "val_weighted_recall": float(val_report["weighted avg"]["recall"]),
             "val_weighted_f1": float(val_report["weighted avg"]["f1-score"]),
         },
+        "training": {
+            "use_augmentation": config.use_augmentation,
+
+            "aug_rotation": config.aug_rotation,
+            "aug_zoom": config.aug_zoom,
+            "aug_contrast": config.aug_contrast,
+
+            "aug_rotation_factor": config.aug_rotation_factor,
+            "aug_zoom_factor": config.aug_zoom_factor,
+            "aug_contrast_factor": config.aug_contrast_factor,
+
+            "use_class_weights": config.use_class_weights,
+
+            "fine_tune": config.fine_tune,
+            "unfreeze_last_n": config.unfreeze_last_n,
+
+            "learning_rate": config.learning_rate,
+            "fine_tune_lr": config.fine_tune_lr,
+            "dropout": config.dropout,
+        },
         "paths": {
             "best_model": str(paths.best_model_path),
             "log_dir": str(paths.log_dir),

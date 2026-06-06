@@ -22,15 +22,14 @@ def get_metrics(num_classes: int) -> list[keras.metrics.Metric]:
 
     return metrics
 
-
+"""
 def build_augmentation_layer(config: PipelineConfig) -> keras.Sequential:
-    """
-    Create an optional data augmentation pipeline.
+    
+    #Create an optional data augmentation pipeline.
+    #Note:
+    #Conservative augmentation for chest X-rays: small rotation and zoom only.
+    #Horizontal flipping is often avoided because anatomical orientation matters.
 
-    Note:
-    Conservative augmentation for chest X-rays: small rotation and zoom only.
-    Horizontal flipping is often avoided because anatomical orientation matters.
-    """
     return keras.Sequential(
         [
             layers.RandomRotation(0.05, seed=config.seed),
@@ -38,7 +37,51 @@ def build_augmentation_layer(config: PipelineConfig) -> keras.Sequential:
         ],
         name="data_augmentation",
     )
+"""
 
+
+def build_augmentation_layer(config: PipelineConfig) -> keras.Sequential | None:
+    """
+    Create a configurable augmentation pipeline.
+    Individual augmentation components can be enabled separately.
+    """
+
+    if not config.use_augmentation:
+        return None
+
+    aug_layers = []
+
+    if config.aug_rotation:
+        aug_layers.append(
+            layers.RandomRotation(
+                config.aug_rotation_factor,
+                seed=config.seed,
+            )
+        )
+
+    if config.aug_zoom:
+        aug_layers.append(
+            layers.RandomZoom(
+                config.aug_zoom_factor,
+                seed=config.seed,
+            )
+        )
+
+    if config.aug_contrast:
+        aug_layers.append(
+            layers.RandomContrast(
+                config.aug_contrast_factor,
+                seed=config.seed,
+            )
+        )
+
+    if not aug_layers:
+        return None
+
+    return keras.Sequential(
+        aug_layers,
+        name="data_augmentation",
+    )
 
 def get_preprocess_fn(model_name: str) -> Callable:
     """
@@ -125,8 +168,10 @@ def build_cnn_from_scratch(
 
     x = layers.Rescaling(1.0 / 255)(inputs)
 
-    if config.use_augmentation:
-        x = build_augmentation_layer(config)(x)
+    augmentation_layer = build_augmentation_layer(config)
+
+    if augmentation_layer is not None:
+        x = augmentation_layer(x)
 
     x = layers.Conv2D(
         32,
@@ -209,8 +254,10 @@ def build_model(
     )
 
     # Optional data augmentation
-    if config.use_augmentation:
-        x = build_augmentation_layer(config)(inputs)
+    augmentation_layer = build_augmentation_layer(config)
+
+    if augmentation_layer is not None:
+        x = augmentation_layer(inputs)
     else:
         x = inputs
 
