@@ -2,6 +2,7 @@
 
 This project trains an image classification model for chest X-ray data using TensorFlow/Keras. The pipeline is modular and covers data loading, training, evaluation, and report generation.
 
+
 ## Project Structure
 
 ```text
@@ -41,6 +42,11 @@ xray-image-classification/
 ├── requirements.txt
 └── README.md
 ```
+
+## Links
+
+- [Project Report](https://docs.google.com/document/d/1zbNnSiJnRAATWIIPisbj2w6xtgR7IXMcXwaRFQCQ-Yc/edit?tab=t.0#heading=h.siws2gxs2nu5)
+- [Project Runs](https://docs.google.com/spreadsheets/d/19_QpnyZM5d5nWBVIKsLHJ3FijxCjZKynrQxhsHJ-vDs/edit?gid=0#gid=0)
 
 ## Requirements
 
@@ -138,7 +144,7 @@ The dataset path does not need to be passed if it matches the default in `src/co
 ```python
 data_dir: Path = Path("data/chest_xray")
 ```
-```
+
 
 ## Important CLI Arguments
 
